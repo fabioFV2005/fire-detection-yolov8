@@ -1,24 +1,34 @@
+# pylint: disable=no-member,no-name-in-module
 from ultralytics import YOLO
-from roboflow import Roboflow
-import ultralytics
-from IPython.display import Image
-import os
-from dotenv import load_dotenv
+import cv2
 
-# load environment variables from .env file
-load_dotenv()
-api_key = os.getenv("DATA_SET_API_KEY")
-workspace = os.getenv("ROBOFLOW_WORKSPACE")
-project_name = os.getenv("ROBOFLOW_PROJECT")
-version_number = os.getenv("ROBOFLOW_VERSION")
 
-if __name__ == "__main__":
-    rf = Roboflow(api_key=api_key)
-    project = rf.workspace(workspace).project(project_name)
-    version = project.version(version_number)
-    dataset = version.download("yolov8")
-    print(dataset.location)
-    model = YOLO("yolov8n.pt")
-    data = dataset.location + "/data.yaml"
-    results = model.train(data=data, epochs=1, imgsz=640, plots=True, device=0, task="detect")
-    Image(filename="./content/runs/detect/train3/results.png", width=600)
+# load the trained model
+model = YOLO("weights/best.pt")
+
+
+
+# open cv configuration to read media files
+# create a named window for display and set it to be resizable
+cv2.namedWindow("Video",cv2.WINDOW_NORMAL)
+# width, height = 800, 600
+cv2.resizeWindow("Video", 800, 600)
+media = cv2.VideoCapture("test_videos/fire.mp4")
+if not media.isOpened():
+    print("Error opening video stream or file")
+else:
+    print("Video file opened successfully")
+
+ret, frame = media.read()
+while True:
+    ret, frame = media.read()
+
+    if not ret:
+        break
+    results = model(frame)
+    annotated_frame = results[0].plot()
+    cv2.imshow("Video", annotated_frame)
+    if cv2.waitKey(25) & 0xFF == ord('q'):
+        break
+media.release()
+cv2.destroyAllWindows()
